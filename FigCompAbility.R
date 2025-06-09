@@ -242,7 +242,7 @@ ggplot(plot_data, aes(x = SumDens, y = Seeds)) +
   facet_wrap(~focal, scales = "free") + theme_classic()
 
 
-# the following all pwi + hois model fits poorly because of the degenaracy of the terms
+# the following all pwi + hois model fits poorly because of the degeneracy of the terms
 #all_pwi_hois_fit <- brm(formula = Seeds ~ 1 + focal + SplDensAC + SplDensFE + SplDensPL + SplDensSA + SplDensUR + MixDensAC + MixDensFE + MixDensPL + MixDensSA + MixDensUR + MixDensACFE + MixDensACPL + MixDensACSA + MixDensACUR + MixDensFEPL + MixDensFESA + MixDensFEUR + MixDensPLSA + MixDensPLUR + MixDensSAUR,
 #                    data = dens_data, backend = "cmdstanr", family = lognormal)
 
