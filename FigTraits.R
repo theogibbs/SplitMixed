@@ -5,6 +5,8 @@ library(tidybayes)
 library(reshape2)
 library(ggpubr)
 library(ggfortify)
+library(gridExtra)
+library(grid)
 
 # reading in seed calibration data
 seed_head_cal <- read.csv("seed_head_calibration.csv")
@@ -21,7 +23,7 @@ AC_seed_per_head_sd   <- sd(AC_seed_head)
 # histogram of AC seed calibration data
 ggplot(data.frame(SeedsPerHead = AC_seed_head), aes(x = SeedsPerHead)) +
   geom_histogram(bins = 4, size = 2, fill = "white", color = "darkblue") +
-  geom_vline(linetype = "dashed", size = 2,, color = "gray",
+  geom_vline(linetype = "dashed", linewidth = 2, color = "gray",
              xintercept = c(AC_seed_per_head_mean - AC_seed_per_head_sd,
                             AC_seed_per_head_mean,
                             AC_seed_per_head_mean + AC_seed_per_head_sd)) +
@@ -232,20 +234,6 @@ for(cur_combo in sp_combos) {
 
 fec_draws$SpCombo <- paste(fec_draws$sp1, fec_draws$sp2)
 
-ggplot(fec_draws, aes(y = b_treatmentsplit, x = SpCombo, color = rev(SpCombo))) +
-  stat_pointinterval(.width = c(0.89, 0.95)) +
-  #facet_grid( ~ Focal, scales = "free_x") +
-  geom_hline(yintercept = 0, alpha = 0.75, linetype = "dashed") +
-  theme_classic() +
-  theme(text = element_text(size=10),
-        legend.position = "none",
-        axis.text.x = element_text(size = 10),
-        legend.text=element_text(size = 15),
-        strip.background = element_blank(),
-        plot.title.position = "plot",
-        plot.caption.position =  "plot") +
-  labs(x = "Species Combination", y = "Change in Mean Number of Seeds from Mixed Treatment")
-
 ggplot(fec_draws, aes(y = b_treatmentsplit, x = SpCombo, ,
                         fill = after_stat(y < 0))) +
   stat_slab(aes(alpha = (after_stat(level))), .width = c(.95, 1)) +
@@ -260,7 +248,7 @@ ggplot(fec_draws, aes(y = b_treatmentsplit, x = SpCombo, ,
         plot.title.position = "plot",
         plot.caption.position =  "plot") +
   labs(x = "Species Combination",
-       y = "Difference in Competitor Phenotype\n in Clustered Relative to Mixed Competitors")
+       y = "Difference in Focal Fecundity\n in Clustered Relative to Mixed Competitors")
 
 
 summ_stats <- fec_draws %>% group_by(SpCombo) %>% point_interval(b_treatmentsplit, .width = 0.89)
@@ -285,24 +273,26 @@ traits$sp1 <- plots$sp1[match(traits$plot, plots$plot)]
 traits$sp2 <- plots$sp2[match(traits$plot, plots$plot)]
 traits$otherspecies <- ifelse(traits$species == traits$sp1, traits$sp2, traits$sp1) # other species is the background competitor that wasn't measured in that datapoint
 
-traits$C_perc <- NC_data$C_perc[match(traits$plot, NC_data$plot)]
-traits$N_perc <- NC_data$N_perc[match(traits$plot, NC_data$plot)]
+# traits$C_perc <- NC_data$C_perc[match(traits$plot, NC_data$plot)]
+# traits$N_perc <- NC_data$N_perc[match(traits$plot, NC_data$plot)]
+# traits$d13C <- NC_data$d13C[match(traits$plot, NC_data$plot)]
+# traits$d15N <- NC_data$d15N[match(traits$plot, NC_data$plot)]
+
+traits$CNratio <- NC_data$C.N[match(traits$plot, NC_data$plot)]
 traits$d13C <- NC_data$d13C[match(traits$plot, NC_data$plot)]
-traits$d15N <- NC_data$d15N[match(traits$plot, NC_data$plot)]
 
 traits2 <- traits %>% mutate(canopy = ((axis1 + axis2)/2)/(height))
 
 
-
-responses <- data.frame() 
 traits_pca <- data.frame()
-
+plot_list <- list()
 for (sp in c("SA", "URLI", "FE", "PL")) {
   
   sp_traits <- traits2 %>% filter(species == sp)
-  sp_traits <- sp_traits[,c(2,3,9, 10,12, 14, 17:21)] %>% na.omit()
+  sp_traits <- sp_traits[,c(2,3,9, 10,12, 14, 17:19)] %>% na.omit()
+  sp_traits <- rename(sp_traits, "C:N ratio" = CNratio)
   
-  pca <- prcomp(sp_traits[c(2:5, 8:11)], scale = T)
+  pca <- prcomp(sp_traits[c(2:5, 8:9)], scale = T)
   
   loadings_sp <- pca$rotation
   axes_sp <- predict(pca, newdata = sp_traits)
@@ -311,31 +301,63 @@ for (sp in c("SA", "URLI", "FE", "PL")) {
   sp_frame$sp <- sp
   traits_pca <- rbind(traits_pca, sp_frame)
   
+  p <- autoplot(pca, sp_frame[c(2:6, 8:9)], scale = T,
+                colour = 'treatment', alpha = 0.7,
+                loadings = TRUE, loadings.color = "black", 
+                loadings.label = TRUE, loadings.label.color = "black", loadings.label.vjust = -.25, loadings.label.hjust = -.25) + 
+         theme_classic() +
+         scale_color_manual(values=c("#332288", "#117733")) +
+    ggtitle(case_when(sp == "FE" ~ "F. microstachys",
+                      sp == "PL" ~ "P. erecta",
+                      sp == "SA" ~ "S. columbariae",
+                      sp == "URLI" ~ "U. lindleyi")) + 
+    theme(plot.title = element_text(face = "italic"))
+  
+  plot_list[[sp]] <- p
 }
 
 ## AC
 acmispon_traits <- traits2 %>% filter(species == "AC")
-acmispon_traits <- acmispon_traits[,c(2, 3,9, 10,12, 14, 17:22)] %>% na.omit()
+acmispon_traits <- acmispon_traits[,c(2, 3,9, 10,12, 14, 17:20)] %>% na.omit()
+acmispon_traits <- rename(acmispon_traits, "canopy index" = canopy, "C:N ratio" = CNratio)
 
-pca_ac <- prcomp(acmispon_traits[c(2:5, 8:12)], scale = T)
+pca_ac <- prcomp(acmispon_traits[c(2:5, 8:10)], scale = T)
 
-# autoplot(pca_ac, acmispon_traits[c(2:5, 8:12)], scale = T,
-#          colour = 'treatment',
-#          loadings = TRUE,
-#          loadings.label = TRUE)
+AC_plot <- autoplot(pca_ac, acmispon_traits[c(2:6, 8:10)], scale = T,
+         colour = 'treatment', alpha = 0.7,
+         loadings = TRUE, loadings.color = "black", 
+         loadings.label = TRUE, loadings.label.color = "black", loadings.label.vjust = -.25, loadings.label.hjust = -.25) + 
+  theme_classic() +
+  scale_color_manual(values=c("#332288", "#117733")) +
+  ggtitle("A. wrangelianus") + theme(plot.title = element_text(face = "italic"))
+
+plot_list[["AC"]] <- AC_plot
+
+legend <- gtable::gtable_filter(ggplotGrob(plot_list[[1]]), "guide-box")
+
+# Remove the legend from each plot (to avoid duplication)
+for (i in 1:length(plot_list)) {
+  plot_list[[i]] <- plot_list[[i]] + theme(legend.position="none")
+}
+
+
+
+jpeg("SI_PCA.jpeg",
+     width = 2500, height = 2500, res = 300)
+PCA_all <- grid.arrange(grobs = c(plot_list, list(legend)), 
+                        ncol = 2)
+dev.off()
 
 loadings_ac <- pca_ac$rotation
 axes_ac <- predict(pca_ac, newdata = acmispon_traits)
 
 ac_frame <- cbind(acmispon_traits, axes_ac)
 ac_frame$sp <- "AC"
-traits_pca <- rbind(traits_pca, ac_frame[c(1:11, 13:20, 22)])
+
+traits_pca <- rbind(traits_pca, ac_frame[c(1:9, 11:16, 18)])
+
 
 traits_pca <- traits_pca %>% mutate(sp = recode(sp, URLI = 'UR'), SpCombo = paste(sp, otherspecies))
-
-#######################################
-### Insert PCA Visualization for SI ###
-#######################################
 
 sp_combos <- unique(traits_pca$SpCombo)
 
@@ -359,19 +381,6 @@ for(cur_combo in sp_combos) {
   
 }
 
-ggplot(trait_draws, aes(y = b_treatmentsplit, x = SpCombo, color = rev(SpCombo))) +
-  stat_pointinterval(.width = c(0.89, 0.95)) +
-  geom_hline(yintercept = 0, alpha = 0.75, linetype = "dashed") +
-  theme_classic() +
-  theme(text = element_text(size=10),
-        legend.position = "none",
-        axis.text.x = element_text(size = 10),
-        legend.text=element_text(size = 15),
-        strip.background = element_blank(),
-        plot.title.position = "plot",
-        plot.caption.position =  "plot") +
-  labs(x = "Species Combination", y = "Change in PC1 from Mixed Treatment")
-
 ggplot(trait_draws, aes(y = b_treatmentsplit, x = SpCombo, ,
                       fill = after_stat(y < 0))) +
   stat_slab(aes(alpha = (after_stat(level))), .width = c(.95, 1)) +
@@ -386,7 +395,7 @@ ggplot(trait_draws, aes(y = b_treatmentsplit, x = SpCombo, ,
         plot.title.position = "plot",
         plot.caption.position =  "plot") +
   labs(x = "Species Combination",
-       y = "Difference in Competitor Phenotype\n in Clustered Relative to Mixed Competitors")
+       y = "Difference in Competitor Performance and Traits\n Clustered Relative to Mixed")
 
 
 summ_traits <- trait_draws %>% group_by(SpCombo) %>% point_interval(b_treatmentsplit, .width = 0.89) %>%
@@ -417,10 +426,10 @@ fec_draws$SpCombo <- ifelse(fec_draws$SpCombo %in% max_combos, fec_draws$SpCombo
 combined_draws <- merge(trait_draws2 %>% select(-c(b_Intercept)), fec_draws %>% select(c(b_treatmentsplit, SpCombo, .chain, .iteration, .draw)),
                         by = c("SpCombo", ".chain", ".iteration", ".draw"))
 
-summ_combined_draws <- combined_draws %>% group_by(.chain, .iteration, .draw) %>%
-  summarize(slope = coef(summary(lm(b_treatmentsplit ~ abs(traits_b_treatmentsplit))))[2,1],
-            intercept = coef(summary(lm(b_treatmentsplit ~ abs(traits_b_treatmentsplit))))[1,1],
-            p = coef(summary(lm(b_treatmentsplit ~ abs(traits_b_treatmentsplit))))[2,4])
+# summ_combined_draws <- combined_draws %>% group_by(.chain, .iteration, .draw) %>%
+#   summarize(slope = coef(summary(lm(b_treatmentsplit ~ abs(traits_b_treatmentsplit))))[2,1],
+#             intercept = coef(summary(lm(b_treatmentsplit ~ abs(traits_b_treatmentsplit))))[1,1],
+#             p = coef(summary(lm(b_treatmentsplit ~ abs(traits_b_treatmentsplit))))[2,4])
 
 
 
@@ -438,7 +447,7 @@ meta_fit_traits <- brm(formula = MeanFec | se(SdFec) ~ me(MeanTraits, SdTraits),
                        data = summ_fec_vs_traits, backend = "cmdstanr",
                        family = gaussian, iter = 100000,
                        control = list(adapt_delta = 0.99),
-                       prior = set_prior("normal(0,0.2)", class = "Intercept")
+                       prior = set_prior("normal(0,0.5)", class = "Intercept")
 )
 fix_ef_reg <- fixef(meta_fit_traits)
 
@@ -482,10 +491,10 @@ plTraitsFecCorr <- ggplot() +
         legend.key.spacing.y = unit(0.25, "cm"),
         plot.title.position = "plot",
         plot.caption.position =  "plot") +
-  labs(x = "Difference in Background Competitor Phenotype\n in Clustered Relative to Mixed Competitors",
+  labs(x = "Difference in Competitor Performance and Traits\n Clustered Relative to Mixed",
        y = "Difference in Focal Fecundity\n in Clustered Relative to Mixed Competitors",
        color = "Species\nCombination")
-plTraitsFecCorr
+plot(plTraitsFecCorr)
 
 slope_data <- meta_fit_traits %>%
   spread_draws(b_Intercept, bsp_meMeanTraitsSdTraits)
@@ -505,12 +514,13 @@ plSlopeHist <- ggplot(slope_data, aes(x = bsp_meMeanTraitsSdTraits,
         plot.title.position = "plot",
         plot.caption.position =  "plot",
         plot.background = element_rect(colour = "black", fill=NA, linewidth=1)) +
+  xlim(-2.5, 4) +
   labs(x = "Slope",
        y = "")
 plSlopeHist
 
 
-vp <- viewport(width = 0.25, height = 0.25, x = 0.65, y = 0.3)
+vp <- viewport(width = 0.25, height = 0.25, x = 0.66, y = 0.3)
 
 print(plTraitsFecCorr)
 print(plSlopeHist, vp = vp)
@@ -555,7 +565,7 @@ meta_fit_traits <- brm(formula = MeanFec | se(SdFec) ~ me(MeanTraits, SdTraits),
                        data = summ_fec_vs_traits_avg, backend = "cmdstanr",
                        family = gaussian, iter = 100000,
                        control = list(adapt_delta = 0.99),
-                       prior = set_prior("normal(0,0.2)", class = "Intercept")
+                       prior = set_prior("normal(0,0.5)", class = "Intercept")
                        )
 fix_ef_reg <- fixef(meta_fit_traits)
 
@@ -599,7 +609,7 @@ plTraitsFecCorr <- ggplot() +
         legend.key.spacing.y = unit(0.25, "cm"),
         plot.title.position = "plot",
         plot.caption.position =  "plot") +
-  labs(x = "Difference in Background Competitor Phenotype\n in Clustered Relative to Mixed Competitors",
+  labs(x = "Average Difference in Competitor Performance and Traits\n Clustered Relative to Mixed",
        y = "Difference in Focal Fecundity\n in Clustered Relative to Mixed Competitors",
        color = "Species\nCombination")
 plTraitsFecCorr
@@ -622,6 +632,7 @@ plSlopeHist <- ggplot(slope_data, aes(x = bsp_meMeanTraitsSdTraits,
         plot.title.position = "plot",
         plot.caption.position =  "plot",
         plot.background = element_rect(colour = "black", fill=NA, linewidth=1)) +
+  xlim(-2.5, 4) +
   labs(x = "Slope",
        y = "")
 plSlopeHist

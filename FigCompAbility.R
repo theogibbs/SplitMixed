@@ -488,7 +488,7 @@ plFecDiff <- ggplot(fec_draws, aes(y = b_treatmentsplit, x = SpCombo, ,
         plot.title.position = "plot",
         plot.caption.position =  "plot") +
   labs(x = "Species Combination",
-       y = "Estimated Change in Mean\nNumber of Seeds from Mixed Treatment")
+       y = "Difference in Focal Fecundity\n in Clustered Relative to Mixed Competitors")
 plFecDiff
 
 
