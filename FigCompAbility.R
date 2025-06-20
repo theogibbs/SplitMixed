@@ -353,6 +353,8 @@ plCompAb <- ggplot(melt(comp_ab_draws), aes(x = value, color = variable)) +
   geom_density() +
   labs(x = "Competitive Effect",
        y = "Density", color = "Species") +
+  scale_color_discrete(
+    labels = expression(italic("A. wrangelianus"), italic("F. michrostachys"), italic("P. erecta"), italic("S. columbariae"), italic("U. lindleyi"))) +
   theme_classic() +
   theme(text = element_text(size=15),
         axis.text.x = element_text(size = 15),
@@ -362,7 +364,7 @@ plCompAb <- ggplot(melt(comp_ab_draws), aes(x = value, color = variable)) +
         plot.caption.position =  "plot")
 plCompAb
 
-jpeg("./figs/SIFigCompAb.jpeg",
+jpeg("SIFigCompAb.jpeg",
      width = 3000, height = 1000, res = 300)
 plCompAb
 dev.off()

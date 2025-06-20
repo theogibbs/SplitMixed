@@ -216,7 +216,20 @@ for(cur_foc in c("SA")) {
   }
 }
 
-fec_draws$SpCombo <- paste(fec_draws$sp1, fec_draws$sp2)
+fec_draws <- fec_draws %>%
+  mutate(sp1 = case_when(sp1 == "AC" ~ "A. wrangelianus",
+                         sp1 == "FE" ~ "F. microstachys",
+                         sp1 == "PL" ~ "P. erecta",
+                         sp1 == "SA" ~ "S. columbariae",
+                         sp1 == "UR" ~ "U. lindleyi")) %>%
+  mutate(sp2 = case_when(sp2 == "AC" ~ "A. wrangelianus",
+                         sp2 == "FE" ~ "F. microstachys",
+                         sp2 == "PL" ~ "P. erecta",
+                         sp2 == "SA" ~ "S. columbariae",
+                         sp2 == "UR" ~ "U. lindleyi"))
+
+
+fec_draws$SpCombo <- paste0(fec_draws$sp1, "\n", fec_draws$sp2)
 
 ggplot(fec_draws, aes(y = Intercept, x = SpCombo, color = rev(SpCombo))) +
   stat_pointinterval(.width = c(0.89, 0.95)) +
@@ -231,9 +244,6 @@ ggplot(fec_draws, aes(y = Intercept, x = SpCombo, color = rev(SpCombo))) +
         plot.caption.position =  "plot") +
   labs(x = "Species Combination", y = "Mean Number of Seeds in Mixed Treatment")
 
-fec_draws$Focal <- paste("Focal:", fec_draws$Focal)
-fec_draws$SpCombo = paste("Combination:\n", fec_draws$SpCombo)
-
 plFecDiff <- ggplot(fec_draws, aes(y = treatmentsplit, x = SpCombo, ,
                                    fill = after_stat(y < 0))) +
   stat_slab(aes(alpha = (after_stat(level))), .width = c(.95, 1)) +
@@ -243,16 +253,17 @@ plFecDiff <- ggplot(fec_draws, aes(y = treatmentsplit, x = SpCombo, ,
   theme_classic() +
   theme(text = element_text(size=10),
         legend.position = "none",
-        axis.text.x = element_text(size = 10),
+        axis.text.x = element_text(size = 10, face = "italic"),,
         legend.text=element_text(size = 15),
         strip.background = element_blank(),
         plot.title.position = "plot",
-        plot.caption.position =  "plot") +
+        plot.caption.position =  "plot",
+        ) +
   labs(x = "Species Combination",
        y = "Estimated Change in Mean\nNumber of Seeds from Clustered Competitors")
 plFecDiff
 
-jpeg("./figs/SIFigDiscreteSalvia.jpeg",
+jpeg("SIFigDiscreteSalvia.jpeg",
      width = 3100, height = 1600, res = 300)
 plFecDiff
 dev.off()

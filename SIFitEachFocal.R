@@ -239,7 +239,24 @@ for(cur_foc in c("AC", "SA", "UR")) {
   }
 }
 
-fec_draws$SpCombo <- paste(fec_draws$sp1, fec_draws$sp2)
+fec_draws <- fec_draws %>%
+  mutate(Focal = case_when(Focal == "AC" ~ "\"Focal: \" * italic(\"A. wrangelianus\")",
+                           Focal == "FE" ~ "\"Focal: \" * italic(\"F. microstachys\")",
+                           Focal == "PL" ~ "\"Focal: \" * italic(\"P. erecta\")",
+                           Focal == "SA" ~ "\"Focal: \" * italic(\"S. columbariae\")",
+                           Focal == "UR" ~ "\"Focal: \" * italic(\"U. lindleyi\")")) %>%
+  mutate(sp1 = case_when(sp1 == "AC" ~ "italic(\"A. wrangelianus\") \n",
+                         sp1 == "FE" ~ "italic(\"F. microstachys\") \n",
+                         sp1 == "PL" ~ "italic(\"P. erecta\") \n",
+                         sp1 == "SA" ~ "italic(\"S. columbariae\") \n",
+                         sp1 == "UR" ~ "italic(\"U. lindleyi\") \n")) %>%
+  mutate(sp2 = case_when(sp2 == "AC" ~ "italic(\"A. wrangelianus\")",
+                         sp2 == "FE" ~ "italic(\"F. microstachys\")",
+                         sp2 == "PL" ~ "italic(\"P. erecta\")",
+                         sp2 == "SA" ~ "italic(\"S. columbariae\")",
+                         sp2 == "UR" ~ "italic(\"U. lindleyi\")"))
+
+fec_draws <- fec_draws %>%  mutate(SpCombo = paste0("atop(italic(", sp1, "), italic(", sp2, "))"))
 
 ggplot(fec_draws, aes(y = Intercept, x = SpCombo, color = rev(SpCombo))) +
   stat_pointinterval(.width = c(0.89, 0.95)) +
@@ -254,8 +271,8 @@ ggplot(fec_draws, aes(y = Intercept, x = SpCombo, color = rev(SpCombo))) +
         plot.caption.position =  "plot") +
   labs(x = "Species Combination", y = "Mean Number of Seeds in Mixed Treatment")
 
-fec_draws$Focal <- paste("Focal:", fec_draws$Focal)
-fec_draws$SpCombo = paste("Combination:\n", fec_draws$SpCombo)
+#fec_draws$Focal <- paste("Focal:", fec_draws$Focal)
+#fec_draws$SpCombo = paste("Combination:\n", fec_draws$SpCombo)
   
 plFecDiff <- ggplot(fec_draws, aes(y = treatmentsplit,
                         fill = after_stat(y < 0))) +
@@ -273,13 +290,13 @@ plFecDiff <- ggplot(fec_draws, aes(y = treatmentsplit,
         strip.background = element_blank(),
         plot.title.position = "plot",
         plot.caption.position =  "plot") +
-    facet_wrap(Focal~SpCombo, scales = "free", nrow = 3) +
+  ggh4x::facet_grid2(Focal~SpCombo, scales = "free", independent = "y", labeller = label_parsed) +
   labs(x = "",
        y = "Estimated Change in Mean Number of Seeds from Clustered Competitors")
 plFecDiff
 
-jpeg("./figs/SIFigFocalInd.jpeg",
-     width = 3100, height = 1600, res = 300)
+jpeg("SIFigFocalInd.jpeg",
+     width = 3800, height = 1600, res = 300)
 plFecDiff
 dev.off()
 

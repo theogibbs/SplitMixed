@@ -221,7 +221,6 @@ for(cur_combo in sp_combos) {
                  b_treatmentsplit,
                  b_focalSA,
                  b_focalUR
-                 #,
                  #b_sp1_count,
                  #b_sp2_count
     )
@@ -234,21 +233,21 @@ for(cur_combo in sp_combos) {
 
 fec_draws$SpCombo <- paste(fec_draws$sp1, fec_draws$sp2)
 
-ggplot(fec_draws, aes(y = b_treatmentsplit, x = SpCombo, ,
-                        fill = after_stat(y < 0))) +
-  stat_slab(aes(alpha = (after_stat(level))), .width = c(.95, 1)) +
-  scale_fill_manual(values=c( "#E69F00", "#56B4E9")) +
-  geom_hline(yintercept = 0, alpha = 0.75, linetype = "dashed") +
-  theme_classic() +
-  theme(text = element_text(size=10),
-        legend.position = "none",
-        axis.text.x = element_text(size = 10),
-        legend.text=element_text(size = 15),
-        strip.background = element_blank(),
-        plot.title.position = "plot",
-        plot.caption.position =  "plot") +
-  labs(x = "Species Combination",
-       y = "Difference in Focal Fecundity\n in Clustered Relative to Mixed Competitors")
+# ggplot(fec_draws, aes(y = b_treatmentsplit, x = SpCombo, ,
+#                         fill = after_stat(y < 0))) +
+#   stat_slab(aes(alpha = (after_stat(level))), .width = c(.95, 1)) +
+#   scale_fill_manual(values=c( "#E69F00", "#56B4E9")) +
+#   geom_hline(yintercept = 0, alpha = 0.75, linetype = "dashed") +
+#   theme_classic() +
+#   theme(text = element_text(size=10),
+#         legend.position = "none",
+#         axis.text.x = element_text(size = 10),
+#         legend.text=element_text(size = 15),
+#         strip.background = element_blank(),
+#         plot.title.position = "plot",
+#         plot.caption.position =  "plot") +
+#   labs(x = "Species Combination",
+#        y = "Difference in Focal Fecundity\n in Clustered Relative to Mixed Competitors")
 
 
 summ_stats <- fec_draws %>% group_by(SpCombo) %>% point_interval(b_treatmentsplit, .width = 0.89)
@@ -340,9 +339,7 @@ for (i in 1:length(plot_list)) {
   plot_list[[i]] <- plot_list[[i]] + theme(legend.position="none")
 }
 
-
-
-jpeg("SI_PCA.jpeg",
+jpeg("SIFigPCA.jpeg",
      width = 2500, height = 2500, res = 300)
 PCA_all <- grid.arrange(grobs = c(plot_list, list(legend)), 
                         ncol = 2)

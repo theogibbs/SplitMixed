@@ -373,40 +373,52 @@ prod(substr(mix_alpha_draws$variable, 4, 10) == substr(split_alpha_draws$variabl
 diff_alpha_draws <- merge(mix_alpha_draws[,-c(5, 8)], split_alpha_draws[,-c(5, 8)], by = c(".chain", ".iteration", ".draw", "Focal", "Resident"))
 diff_alpha_draws$LogRatio <- log(diff_alpha_draws$value.x / diff_alpha_draws$value.y)
 
+diff_alpha_draws <- diff_alpha_draws %>% 
+  mutate(Focal2 = case_when(Focal == "Focal: AC" ~ "\"Focal: \" * italic(\"A. wrangelianus\")",
+                           Focal == "Focal: FE" ~ "\"Focal: \" * italic(\"F. microstachys\")",
+                           Focal == "Focal: PL" ~ "\"Focal: \" * italic(\"P. erecta\")",
+                           Focal == "Focal: SA" ~ "\"Focal: \" * italic(\"S. columbariae\")",
+                           Focal == "Focal: UR" ~ "\"Focal: \" * italic(\"U. lindleyi\")")) %>%
+  mutate(Resident2 = case_when(Resident == "Resident: AC" ~ "\"Resident: \" * italic(\"A. wrangelianus\")",
+                               Resident == "Resident: FE" ~ "\"Resident: \" * italic(\"F. microstachys\")",
+                               Resident == "Resident: PL" ~ "\"Resident: \" * italic(\"P. erecta\")",
+                               Resident == "Resident: SA" ~ "\"Resident: \" * italic(\"S. columbariae\")",
+                               Resident == "Resident: UR" ~ "\"Resident: \" * italic(\"U. lindleyi\")"))
+  
 plDiffs <- ggplot(diff_alpha_draws, aes(x = LogRatio)) +
   geom_density(size = 1) + theme_classic() +
-  facet_wrap(Focal ~ Resident, scales = "free", nrow = 3) +
+  facet_wrap(Focal2 ~ Resident2, scales = "free", nrow = 3, labeller = label_parsed) +
   labs(x = "Log Ratio of Mixed to Clustered Competition Coefficient", y = "") +
   geom_vline(xintercept = 0, linetype = "dashed") +
-  theme(text = element_text(size=15),
-        strip.text.x = element_text(size = 15),
-        strip.text.y = element_text(size = 15),
-        legend.text=element_text(size = 15),
+  theme(text = element_text(size=10),
+        strip.text.x = element_text(size = 10),
+        strip.text.y = element_text(size = 10),
+        legend.text=element_text(size = 10),
         strip.background = element_blank())
 plDiffs
 
-jpeg("./figs/SIFigBHDiffs.jpeg",
+jpeg("SIFigBHDiffs.jpeg",
      width = 3200, height = 1600, res = 300)
 plDiffs
 dev.off()
 
 agg_diff_draws <- diff_alpha_draws %>%
-  group_by(.chain, .iteration, .draw, Focal) %>%
+  group_by(.chain, .iteration, .draw, Focal, Focal2) %>%
   summarise(CumLogRatio = sum(LogRatio))
 
 plAggDiffs <- ggplot(agg_diff_draws, aes(x = CumLogRatio)) +
   geom_density(size = 1) + theme_classic() +
-  facet_wrap(~ Focal, scales = "free", nrow = 1) +
+  facet_wrap(~ Focal2, scales = "free", nrow = 1, labeller = label_parsed) +
   labs(x = "Cumulative Log Ratio of Mixed to Clustered Competition Coefficient", y = "") +
   geom_vline(xintercept = 0, linetype = "dashed") +
-  theme(text = element_text(size=15),
-        strip.text.x = element_text(size = 15),
-        strip.text.y = element_text(size = 15),
-        legend.text=element_text(size = 15),
+  theme(text = element_text(size=10),
+        strip.text.x = element_text(size = 10),
+        strip.text.y = element_text(size = 10),
+        legend.text=element_text(size = 10),
         strip.background = element_blank())
 plAggDiffs
 
-jpeg("./figs/SIFigBHAggDiffs.jpeg",
+jpeg("SIFigBHAggDiffs.jpeg",
      width = 2200, height = 900, res = 300)
 plAggDiffs
 dev.off()

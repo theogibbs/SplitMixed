@@ -24,14 +24,14 @@ plHistAC <- ggplot(data.frame(SeedsPerHead = AC_seed_head), aes(x = SeedsPerHead
   geom_histogram(bins = 4, size = 2, fill = "white", color = "darkblue") +
   geom_vline(linetype = "dashed", size = 1, color = "gray",
              xintercept = c(AC_seed_per_head_mean)) +
-  labs(title = "AC", x = "Seeds per pod", y = "Count") +
+  labs(title = "A. wrangelianus", x = "Seeds per pod", y = "Count") +
   theme_classic() +
   theme(text = element_text(size=15),
         legend.position = "none",
         axis.text.x = element_text(size = 15),
         legend.text=element_text(size = 15),
         strip.background = element_blank(),
-        plot.title = element_text(hjust = 0.5),
+        plot.title = element_text(hjust = 0.5, face = "italic"),
         plot.caption.position =  "plot")
 plHistAC
 
@@ -49,14 +49,14 @@ plHistUR <- ggplot(data.frame(SeedsPerHead = UR_seed_head), aes(x = SeedsPerHead
   geom_histogram(size = 2, fill = "white", color = "darkblue", bins = 15) +
   geom_vline(linetype = "dashed", size = 1, color = "gray",
              xintercept = c(UR_seed_per_head_mean)) +
-  labs(title = "UR", x = "Seeds per head", y = "Count") +
+  labs(title = "U. lindleyi", x = "Seeds per head", y = "Count") +
   theme_classic() +
   theme(text = element_text(size=15),
         legend.position = "none",
         axis.text.x = element_text(size = 15),
         legend.text=element_text(size = 15),
         strip.background = element_blank(),
-        plot.title = element_text(hjust = 0.5),
+        plot.title = element_text(hjust = 0.5, face = "italic"),
         plot.caption.position =  "plot")
 plHistUR
 
@@ -73,18 +73,18 @@ ggplot(SA_seed_head, aes(x = Diameter_CM, y = Seeds)) +
 
 plRegressionSA <- ggplot(SA_seed_head, aes(x = Diameter_CM^2, y = Seeds)) +
   geom_point() + theme_classic() + geom_smooth(method = "lm") +
-  labs(title = "SA", x = "Diameter of flower cluster squared (cm)", y = "Seeds") +
+  labs(title = "S. columbariae", x = "Diameter of flower cluster squared (cm)", y = "Seeds") +
   theme_classic() +
   theme(text = element_text(size=15),
         legend.position = "none",
         axis.text.x = element_text(size = 15),
         legend.text=element_text(size = 15),
         strip.background = element_blank(),
-        plot.title = element_text(hjust = 0.5),
+        plot.title = element_text(hjust = 0.5, face = "italic"),
         plot.caption.position =  "plot")
 plRegressionSA
 
-jpeg("./figs/SIFigSeedCalibration.jpeg",
+jpeg("SIFigSeedCalibration.jpeg",
      width = 3800, height = 1250, res = 300)
 grid.arrange(plHistAC, plRegressionSA, plHistUR, ncol = 3)
 dev.off()

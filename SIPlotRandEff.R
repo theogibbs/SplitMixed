@@ -84,11 +84,6 @@ plRegressionSA <- ggplot(SA_seed_head, aes(x = Diameter_CM^2, y = Seeds)) +
         plot.caption.position =  "plot")
 plRegressionSA
 
-jpeg("./figs/SIFigSeedCalibration.jpeg",
-     width = 3800, height = 1250, res = 300)
-grid.arrange(plHistAC, plRegressionSA, plHistUR, ncol = 3)
-dev.off()
-
 
 # creating a new variable for diameter^2
 SA_seed_head$Diameter_CM_Squared <- SA_seed_head$Diameter_CM^2
@@ -260,6 +255,39 @@ for(cur_combo in sp_combos) {
 
 fec_draws$SpCombo <- paste(fec_draws$sp1, fec_draws$sp2)
 
+AC_draws <- fec_draws %>%
+  filter(substr(SpCombo, 1, 2) == "AC") %>%
+  mutate(Positive = b_treatmentsplit > 0) %>%
+  summarise(Positive = sum(Positive) / n())
+print(AC_draws$Positive)
+
+SAUR_draws <- fec_draws %>%
+  filter(SpCombo == "SA UR") %>%
+  mutate(Positive = b_treatmentsplit > 0) %>%
+  summarise(Positive = sum(Positive) / n())
+print(SAUR_draws$Positive)
+
+FEPL_draws <- fec_draws %>%
+  filter(SpCombo == "FE PL") %>%
+  mutate(Positive = b_treatmentsplit > 0) %>%
+  summarise(Positive = sum(Positive) / n())
+print(FEPL_draws$Positive)
+
+fec_draws <- fec_draws %>%
+  mutate(sp1 = case_when(sp1 == "AC" ~ "A. wrangelianus",
+                         sp1 == "FE" ~ "F. microstachys",
+                         sp1 == "PL" ~ "P. erecta",
+                         sp1 == "SA" ~ "S. columbariae",
+                         sp1 == "UR" ~ "U. lindleyi")) %>%
+  mutate(sp2 = case_when(sp2 == "AC" ~ "A. wrangelianus",
+                         sp2 == "FE" ~ "F. microstachys",
+                         sp2 == "PL" ~ "P. erecta",
+                         sp2 == "SA" ~ "S. columbariae",
+                         sp2 == "UR" ~ "U. lindleyi"))
+
+
+fec_draws$SpCombo <- paste0(fec_draws$sp1, "\n", fec_draws$sp2)
+
 
 ggplot(fec_draws, aes(y = b_Intercept, x = SpCombo, color = rev(SpCombo))) +
   stat_pointinterval(.width = c(0.89, 0.95)) +
@@ -297,7 +325,7 @@ plFecDiff <- ggplot(fec_draws, aes(y = b_treatmentsplit, x = SpCombo, ,
   theme_classic() +
   theme(text = element_text(size=10),
         legend.position = "none",
-        axis.text.x = element_text(size = 10),
+        axis.text.x = element_text(size = 7, face = "italic"),
         legend.text=element_text(size = 15),
         strip.background = element_blank(),
         plot.title.position = "plot",
@@ -306,28 +334,7 @@ plFecDiff <- ggplot(fec_draws, aes(y = b_treatmentsplit, x = SpCombo, ,
        y = "Estimated Change in Mean\nNumber of Seeds from Clustered Competitors")
 plFecDiff
 
-jpeg("./figs/SIFigPlotRandEff.jpeg",
-     width = 2250, height = 1000, res = 300)
+jpeg("SIFigPlotRandEff.jpeg",
+     width = 3100, height = 1000, res = 300)
 plFecDiff
 dev.off()
-
-AC_draws <- fec_draws %>%
-  filter(substr(SpCombo, 1, 2) == "AC") %>%
-  mutate(Positive = b_treatmentsplit > 0) %>%
-  summarise(Positive = sum(Positive) / n())
-print(AC_draws$Positive)
-
-SAUR_draws <- fec_draws %>%
-  filter(SpCombo == "SA UR") %>%
-  mutate(Positive = b_treatmentsplit > 0) %>%
-  summarise(Positive = sum(Positive) / n())
-print(SAUR_draws$Positive)
-
-FEPL_draws <- fec_draws %>%
-  filter(SpCombo == "FE PL") %>%
-  mutate(Positive = b_treatmentsplit > 0) %>%
-  summarise(Positive = sum(Positive) / n())
-print(FEPL_draws$Positive)
-
-
-
