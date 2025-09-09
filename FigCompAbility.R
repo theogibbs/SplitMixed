@@ -242,7 +242,7 @@ ggplot(plot_data, aes(x = SumDens, y = Seeds)) +
   facet_wrap(~focal, scales = "free") + theme_classic()
 
 
-# the following all pwi + hois model fits poorly because of the degeneracy of the terms
+# the following all pwi + hois model fits poorly because of the degenaracy of the terms
 #all_pwi_hois_fit <- brm(formula = Seeds ~ 1 + focal + SplDensAC + SplDensFE + SplDensPL + SplDensSA + SplDensUR + MixDensAC + MixDensFE + MixDensPL + MixDensSA + MixDensUR + MixDensACFE + MixDensACPL + MixDensACSA + MixDensACUR + MixDensFEPL + MixDensFESA + MixDensFEUR + MixDensPLSA + MixDensPLUR + MixDensSAUR,
 #                    data = dens_data, backend = "cmdstanr", family = lognormal)
 
@@ -353,8 +353,6 @@ plCompAb <- ggplot(melt(comp_ab_draws), aes(x = value, color = variable)) +
   geom_density() +
   labs(x = "Competitive Effect",
        y = "Density", color = "Species") +
-  scale_color_discrete(
-    labels = expression(italic("A. wrangelianus"), italic("F. michrostachys"), italic("P. erecta"), italic("S. columbariae"), italic("U. lindleyi"))) +
   theme_classic() +
   theme(text = element_text(size=15),
         axis.text.x = element_text(size = 15),
@@ -364,7 +362,7 @@ plCompAb <- ggplot(melt(comp_ab_draws), aes(x = value, color = variable)) +
         plot.caption.position =  "plot")
 plCompAb
 
-jpeg("SIFigCompAb.jpeg",
+jpeg("./figs/SIFigCompAb.jpeg",
      width = 3000, height = 1000, res = 300)
 plCompAb
 dev.off()
@@ -490,7 +488,7 @@ plFecDiff <- ggplot(fec_draws, aes(y = b_treatmentsplit, x = SpCombo, ,
         plot.title.position = "plot",
         plot.caption.position =  "plot") +
   labs(x = "Species Combination",
-       y = "Difference in Focal Fecundity\n in Clustered Relative to Mixed Competitors")
+       y = "Estimated Change in Mean\nNumber of Seeds from Mixed Treatment")
 plFecDiff
 
 
