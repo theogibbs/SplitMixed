@@ -93,7 +93,7 @@ melt_sa_data <- sa_fec_data %>%
 
 # plots that are missing from the above data
 # either because they are bare
- # or because they are missing a focal
+# or because they are missing a focal
 plots_without_salvia_data <- setdiff(500:814, melt_sa_data$Plot)
 print(plots_without_salvia_data)
 
@@ -224,8 +224,8 @@ ggplot(plot_data, aes(x = SumDens, y = Seeds)) +
   geom_point() + scale_y_log10() +
   facet_wrap(~focal, scales = "free") + theme_classic()
 
-# Beverton-Holt model formula for fitting
-bh_formula <- bf(log(Seeds + 1) ~ log(lambda / (1 + MixLog * (mixalphaAC * DensAC + mixalphaFE * DensFE + mixalphaPL * DensPL + mixalphaSA * DensSA + mixalphaUR * DensUR) + SplitLog * (splalphaAC * DensAC + splalphaFE * DensFE + splalphaPL * DensPL + splalphaSA * DensSA + splalphaUR * DensUR))),
+# Lotka-Volterra model formula for fitting
+ri_formula <- bf(log(Seeds + 1) ~ log(lambda * exp( - MixLog * (mixalphaAC * DensAC + mixalphaFE * DensFE + mixalphaPL * DensPL + mixalphaSA * DensSA + mixalphaUR * DensUR)) * exp(-SplitLog * (splalphaAC * DensAC + splalphaFE * DensFE + splalphaPL * DensPL + splalphaSA * DensSA + splalphaUR * DensUR))),
                  lambda ~ 1,
                  mixalphaAC ~ 1, mixalphaFE ~ 1, mixalphaPL ~ 1, mixalphaSA ~ 1, mixalphaUR ~ 1,
                  splalphaAC ~ 1, splalphaFE ~ 1, splalphaPL ~ 1, splalphaSA ~ 1, splalphaUR ~ 1,
@@ -257,19 +257,19 @@ for(cur_foc in focal_IDs) {
   
   # setting priors for all the parameters
   cur_priors <- c(set_prior(paste0("normal(", mean_lambda, ", ", sd_lambda, ")"), nlpar = "lambda", lb = min_lambda, ub = max_lambda),
-                  set_prior("normal(0.05, 5)", nlpar = "mixalphaAC", lb = .001, ub = 20),
-                  set_prior("normal(0.05, 5)", nlpar = "mixalphaFE", lb = .001, ub = 20),
-                  set_prior("normal(0.05, 5)", nlpar = "mixalphaPL", lb = .001, ub = 20),
-                  set_prior("normal(0.05, 5)", nlpar = "mixalphaSA", lb = .001, ub = 20),
-                  set_prior("normal(0.05, 5)", nlpar = "mixalphaUR", lb = .001, ub = 20),
-                  set_prior("normal(0.05, 5)", nlpar = "splalphaAC", lb = .001, ub = 20),
-                  set_prior("normal(0.05, 5)", nlpar = "splalphaFE", lb = .001, ub = 20),
-                  set_prior("normal(0.05, 5)", nlpar = "splalphaPL", lb = .001, ub = 20),
-                  set_prior("normal(0.05, 5)", nlpar = "splalphaSA", lb = .001, ub = 20),
-                  set_prior("normal(0.05, 5)", nlpar = "splalphaUR", lb = .001, ub = 20))
+                  set_prior("normal(0.05, 5)", nlpar = "mixalphaAC", lb = .001, ub = 1),
+                  set_prior("normal(0.05, 5)", nlpar = "mixalphaFE", lb = .001, ub = 1),
+                  set_prior("normal(0.05, 5)", nlpar = "mixalphaPL", lb = .001, ub = 1),
+                  set_prior("normal(0.05, 5)", nlpar = "mixalphaSA", lb = .001, ub = 1),
+                  set_prior("normal(0.05, 5)", nlpar = "mixalphaUR", lb = .001, ub = 1),
+                  set_prior("normal(0.05, 5)", nlpar = "splalphaAC", lb = .001, ub = 1),
+                  set_prior("normal(0.05, 5)", nlpar = "splalphaFE", lb = .001, ub = 1),
+                  set_prior("normal(0.05, 5)", nlpar = "splalphaPL", lb = .001, ub = 1),
+                  set_prior("normal(0.05, 5)", nlpar = "splalphaSA", lb = .001, ub = 1),
+                  set_prior("normal(0.05, 5)", nlpar = "splalphaUR", lb = .001, ub = 1))
   
   # fitting the model
-  cur_fit <- brm(bh_formula,
+  cur_fit <- brm(ri_formula,
                  data = cur_data,
                  prior = cur_priors,
                  iter = 10000,
@@ -347,34 +347,8 @@ plLambdas
 alpha_draws <- plot_draws %>%
   filter(variable != "lambda") %>%
   mutate(Resident = substr(variable, 9, 10)) %>%
-  mutate(Treatment = substr(variable, 1, 3))
-
-intra_alphas <- alpha_draws %>%
-  filter(Resident == Focal)
-
-
-res_IDs <- unique(alpha_draws$Resident)
-
-inter_vs_intra <- data.frame()
-
-for(cur_foc in focal_IDs) {
-  cur_intra <- intra_alphas %>%
-    filter(Focal == cur_foc)
-  
-  for(cur_res in res_IDs) {
-    if(cur_foc == cur_res) {
-      next
-    }
-    cur_inter <- alpha_draws %>%
-      filter(Focal == cur_foc & Resident == cur_res) %>%
-      mutate(InterIntra = log(value / cur_intra$value))
-    
-    inter_vs_intra <- rbind(inter_vs_intra, cur_inter)
-
-  }
-
-}
-
+  mutate(Treatment = substr(variable, 1, 3)) %>%
+  mutate(Resident = paste("Resident:", Resident))
 
 inferred_alphas <- alpha_draws %>%
   filter(variable != "lambda") %>%
@@ -382,8 +356,7 @@ inferred_alphas <- alpha_draws %>%
   dplyr::summarise(value = mean(value))
 
 alpha_draws <- alpha_draws %>%
-  mutate(Focal = paste("Focal:", Focal)) %>%
-  mutate(Resident = paste("Resident:", Resident))
+  mutate(Focal = paste("Focal:", Focal))
 
 # plotting posterior densities of the alphas
 plAlphas <- ggplot(alpha_draws, aes(x = value, color = Treatment)) +
@@ -396,20 +369,6 @@ plAlphas <- ggplot(alpha_draws, aes(x = value, color = Treatment)) +
         legend.text=element_text(size = 15),
         strip.background = element_blank())
 plAlphas
-
-
-# plotting posterior densities of the alphas
-plInterIntra <- ggplot(inter_vs_intra, aes(x = InterIntra, color = Treatment)) +
-  geom_density(size = 1) + theme_classic() +
-  facet_wrap(Focal ~ Resident, scales = "free", nrow = 3) +
-  labs(x = "Log Ratio of Interspecific to Intraspecific Competition Coefficient", y = "") +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  theme(text = element_text(size=15),
-        strip.text.x = element_text(size = 15),
-        strip.text.y = element_text(size = 15),
-        legend.text=element_text(size = 15),
-        strip.background = element_blank())
-plInterIntra
 
 mix_alpha_draws <- alpha_draws %>%
   filter(Treatment == "mix")
@@ -434,7 +393,7 @@ plDiffs <- ggplot(diff_alpha_draws, aes(x = LogRatio)) +
         strip.background = element_blank())
 plDiffs
 
-jpeg("./figs/SIFigBHDiffs.jpeg",
+jpeg("./figs/SIFigRIDiffs.jpeg",
      width = 3200, height = 1600, res = 300)
 plDiffs
 dev.off()
@@ -455,7 +414,7 @@ plAggDiffs <- ggplot(agg_diff_draws, aes(x = CumLogRatio)) +
         strip.background = element_blank())
 plAggDiffs
 
-jpeg("./figs/SIFigBHAggDiffs.jpeg",
+jpeg("./figs/SIFigRIAggDiffs.jpeg",
      width = 2200, height = 900, res = 300)
 plAggDiffs
 dev.off()
@@ -464,88 +423,6 @@ agg_diff_draws %>%
   group_by(Focal) %>%
   dplyr::summarise(positive = sum(CumLogRatio > 0) / n())
 
-fec_preds <- c()
-for(i in 1:nrow(plot_data)) {
-  cur_data <- plot_data[i,]
-  
-  cur_lambda <- inferred_lambdas %>%
-    filter(Focal == cur_data$focal)
-  cur_lambda <- cur_lambda$value
-  
-  cur_alphas <- inferred_alphas %>%
-    filter(Focal == cur_data$focal)
-  
-  if(cur_data$MixLog) {
-    cur_alphas <- cur_alphas %>%
-      filter(Treatment == "mix")
-  } else if(cur_data$SplitLog) {
-    cur_alphas <- cur_alphas %>%
-      filter(Treatment == "spl")
-  }
-  
-  cur_alphas <- cur_alphas$value
-  
-  cur_dens <- cur_data[9:13]
-  cur_pred <- cur_lambda / (1 + sum(cur_alphas * cur_dens))
-  
-  fec_preds <- c(fec_preds, cur_pred)
-}
-
-plot_data$Source <- "Data"
-pred_data <- plot_data
-pred_data$Seeds <- fec_preds
-pred_data$Source <- "Prediction"
-
-more_plot_data <- rbind(plot_data, pred_data)
-
-plot_data$PredSeeds <- fec_preds
-
-pred_plot_data <- plot_data %>%
-  filter(treatment != "bare") %>%
-  mutate(treatment = ifelse(treatment == "mix", "Mixed", "Clustered")) %>%
-  mutate(focal = paste("Focal:", focal))
-
-plPredFits <- ggplot(pred_plot_data, aes(x = PredSeeds, y = Seeds)) +
-  geom_point(alpha = 0.5) +
-  theme_classic() +
-  theme(text = element_text(size=15),
-        strip.text.x = element_text(size = 15),
-        strip.text.y = element_text(size = 15),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
-        legend.text=element_text(size = 15),
-        strip.background = element_blank()) +
-  geom_abline(slope = 1, intercept = 0) +
-  labs(x = "Predicted Seeds", y = "Observed Seeds") +
-  facet_wrap(treatment~focal, scales = "free")
-plPredFits
-
-jpeg("./figs/SIFigBHPreds.jpeg",
-     width = 2500, height = 1500, res = 300)
-plPredFits
-dev.off()
-
-for(cur_foc in c("AC", "SA", "UR")) {
-  
-  cur_plot <- plot_data %>%
-    filter(focal == cur_foc)
-  
-  show(
-  ggplot(cur_plot %>% filter(treatment != "bare"),
-         aes(x = SumDens, y = Seeds, color = treatment)) +
-    geom_point(alpha = 0.5) +
-    geom_line(aes(x = SumDens, y = PredSeeds, color = treatment)) +
-    facet_wrap(sp1~sp2, scales = "free", nrow = 2) + theme_classic() +
-    theme(text = element_text(size=15),
-          strip.text.x = element_text(size = 15),
-          strip.text.y = element_text(size = 15),
-          legend.text=element_text(size = 15),
-          strip.background = element_blank()) +
-    ggtitle(paste(cur_foc, "focals"))
-  )
-}
-
-loo_data$Model <- "Beverton-Holt"
-write.csv(loo_data, "BevertonHoltLOO.csv", row.names = FALSE)
-
-
+loo_data$Model <- "Ricker"
+write.csv(loo_data, "RickerLOO.csv", row.names = FALSE)
 

@@ -1,11 +1,11 @@
 library(tidyverse)
-library(reshape2)
 library(brms)
 library(cmdstanr)
 library(tidybayes)
 library(reshape2)
 library(ggpubr)
 library(gridExtra)
+library(grid)
 
 # reading in seed calibration data
 seed_head_cal <- read.csv("seed_head_calibration.csv")
@@ -176,141 +176,176 @@ for(cur_foc in c("AC", "SA", "UR")) {
          scale_color_hue(direction = -1))
   
   ## pooled across background competitor combinations
-  #show(ggboxplot(cur_fec %>% filter(treatment != "bare"), x = "treatment", y = "Seeds", add = "jitter",
-  #               color = "treatment") + 
-  #       stat_compare_means(aes(group=treatment), method="t.test") + 
-  #       ylab("Seeds") + ggtitle(cur_foc) +
-  #       scale_color_hue(direction = -1))
+  show(ggboxplot(cur_fec %>% filter(treatment != "bare"), x = "treatment", y = "Seeds", add = "jitter",
+                 color = "treatment") + 
+         stat_compare_means(aes(group=treatment), method="t.test") + 
+         ylab("Seeds") + ggtitle(cur_foc) +
+         scale_color_hue(direction = -1))
   
 }
 
 
 # removing data for missing focals
-rem_bare_na_fec_data <- fecundity %>%
-  filter(treatment != "bare") %>%
+rem_na_fec_data <- fec_data %>%
   mutate(sp1_count = ifelse(treatment == "bare", 0, sp1_count)) %>%
   mutate(sp2_count = ifelse(treatment == "bare", 0, sp2_count)) %>%
   filter(!(is.na(sp1_count & is.na(sp2_count)))) %>%
   filter(!is.na(Seeds))
 
-sp_combos <- unique(rem_bare_na_fec_data$combo)
 
-rem_bare_na_fec_data$treatment <- fct_rev(rem_bare_na_fec_data$treatment)
+# relabeling data to record which species are present and
+# at what densities in five new columns so
+# for example "DensFE" is zero
+# when neither sp1 or sp2 is FE but is the value of sp1_count
+# when FE is sp1 (and similarly when it is sp2)
+dens_data <- rem_na_fec_data %>%
+  mutate(DensAC = case_when(sp1 == "AC" ~ sp1_count,
+                            sp2 == "AC" ~ sp2_count,
+                            .default = 0)) %>%
+  mutate(DensFE = case_when(sp1 == "FE" ~ sp1_count,
+                            sp2 == "FE" ~ sp2_count,
+                            .default = 0)) %>%
+  mutate(DensPL = case_when(sp1 == "PL" ~ sp1_count,
+                            sp2 == "PL" ~ sp2_count,
+                            .default = 0)) %>%
+  mutate(DensSA = case_when(sp1 == "SA" ~ sp1_count,
+                            sp2 == "SA" ~ sp2_count,
+                            .default = 0)) %>%
+  mutate(DensUR = case_when(sp1 == "UR" ~ sp1_count,
+                            sp2 == "UR" ~ sp2_count,
+                            .default = 0)) %>%
+  mutate(MixLog = treatment == "mix") %>%
+  mutate(SplLog = treatment == "split") %>%
+  mutate(SplDensAC = as.numeric(DensAC > 0)) %>% # only taking the presence / absence of species
+  mutate(SplDensFE = as.numeric(DensFE > 0)) %>% # rather than their actual density / abundance
+  mutate(SplDensPL = as.numeric(DensPL > 0)) %>%
+  mutate(SplDensSA = as.numeric(DensSA > 0)) %>%
+  mutate(SplDensUR = as.numeric(DensUR > 0)) %>%
+  mutate(MixDensAC = SplDensAC * MixLog) %>% 
+  mutate(MixDensFE = SplDensFE * MixLog) %>% 
+  mutate(MixDensPL = SplDensPL * MixLog) %>%
+  mutate(MixDensSA = SplDensSA * MixLog) %>%
+  mutate(MixDensUR = SplDensUR * MixLog) %>%
+  mutate(SplDensAC = SplDensAC * SplLog) %>% 
+  mutate(SplDensFE = SplDensFE * SplLog) %>% 
+  mutate(SplDensPL = SplDensPL * SplLog) %>%
+  mutate(SplDensSA = SplDensSA * SplLog) %>%
+  mutate(SplDensUR = SplDensUR * SplLog)
 
-loo_data <- data.frame()
-fec_draws <- data.frame()
-for(cur_foc in c("AC", "SA", "UR")) {
-  for(cur_combo in sp_combos) {
-    
-    cur_fec <- rem_bare_na_fec_data %>%
-      filter(focal == cur_foc) %>%
-      filter(combo == cur_combo) %>%
-      arrange(treatment)
-    
-    
-    cur_fit <- brm(formula = Seeds ~ 1 + treatment + sp1_count + sp2_count,
-                   data = cur_fec, backend = "cmdstanr", family = lognormal)
-    
-    cur_loo <- loo(cur_fit)$estimates[3, 1:2]
-    cur_loo <- as.data.frame(t(cur_loo))
-    cur_loo$Focal <- cur_foc
-    cur_loo$SpCombo <- cur_combo
-    loo_data <- rbind(loo_data, cur_loo)
-    
-    cur_draws <- cur_fit %>%
-      spread_draws(b_Intercept,
-                   b_treatmentsplit,
-                   b_sp1_count,
-                   b_sp2_count)
-    
-    colnames(cur_draws) <- c(".chain",
-                             ".iteration",
-                             ".draw",
-                             "Intercept",
-                             "treatmentsplit",
-                             "sp1_slope",
-                             "sp2_slope")
-    
-    cur_draws$Focal <- cur_foc
-    cur_draws$sp1 <- unique(cur_fec$sp1)
-    cur_draws$sp2 <- unique(cur_fec$sp2)
-    fec_draws <- rbind(fec_draws, cur_draws)
-    
-  }
+# summing competitor densities for plotting
+plot_data <- dens_data %>%
+  mutate(SumDens = DensAC + DensFE + DensPL + DensSA + DensUR)
+
+# seeds versus density plot
+ggplot(plot_data, aes(x = SumDens, y = Seeds)) +
+  geom_point() + scale_y_log10() +
+  facet_wrap(~focal, scales = "free") + theme_classic()
+
+mod_draws <- data.frame()
+for(cur_foc in focal_IDs) {
+  cur_data <- dens_data %>%
+    filter(focal == cur_foc)
+  
+  cur_pwis_fit <- brm(formula = Seeds ~ 1 + SplDensAC + SplDensFE + SplDensPL + SplDensSA + SplDensUR + MixDensAC + MixDensFE + MixDensPL + MixDensSA + MixDensUR,
+                      data = cur_data, backend = "cmdstanr", family = lognormal, iter = 10000)
+  
+  cur_draws <- cur_pwis_fit %>%
+    spread_draws(b_Intercept,
+                 b_SplDensAC,
+                 b_SplDensFE,
+                 b_SplDensPL,
+                 b_SplDensSA,
+                 b_SplDensUR,
+                 b_MixDensAC,
+                 b_MixDensFE,
+                 b_MixDensPL,
+                 b_MixDensSA,
+                 b_MixDensUR)
+  
+  cur_draws$focal <- cur_foc
+  mod_draws <- rbind(mod_draws, cur_draws)
 }
 
-fec_draws$SpCombo <- paste(fec_draws$sp1, fec_draws$sp2)
+melt_draws <- mod_draws %>%
+  melt(id.vars = c("focal", ".chain", ".iteration", ".draw"))
 
-ggplot(fec_draws, aes(y = Intercept, x = SpCombo, color = rev(SpCombo))) +
-  stat_pointinterval(.width = c(0.89, 0.95)) +
-  facet_wrap(~Focal, scales = "free_y", nrow = 3) +
+ggplot(melt_draws %>%
+         filter(variable == "b_Intercept"), aes(x = value)) +
+  geom_density() +
+  facet_wrap( ~ focal, scales = "free") +
   theme_classic() +
-  theme(text = element_text(size=10),
-        legend.position = "none",
-        axis.text.x = element_text(size = 10),
+  theme(text = element_text(size=15),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
         legend.text=element_text(size = 15),
-        strip.background = element_blank(),
-        plot.title.position = "plot",
-        plot.caption.position =  "plot") +
-  labs(x = "Species Combination", y = "Mean Number of Seeds in Mixed Treatment")
+        strip.background = element_blank())
 
-fec_draws$Focal <- paste("Focal:", fec_draws$Focal)
-fec_draws$SpCombo = paste("Combination:\n", fec_draws$SpCombo)
+alpha_draws <- melt_draws %>%
+  filter(variable != "b_Intercept")
+
+alpha_draws <- alpha_draws %>%
+  mutate(resident = substr(variable, 10, 12)) %>%
+  mutate(treatment = substr(variable, 3, 5))
+
+ggplot(alpha_draws, aes(x = value, color = treatment)) +
+  geom_density() +
+  facet_grid(focal ~ resident) +
+  theme_classic() +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  theme(text = element_text(size=15),
+        strip.text.x = element_text(size = 10),
+        strip.text.y = element_text(size = 10),
+        legend.text=element_text(size = 15),
+        strip.background = element_blank())
+
+
+intra_alphas <- alpha_draws %>%
+  filter(resident == focal)
+
+res_IDs <- unique(alpha_draws$resident)
+
+inter_vs_intra <- data.frame()
+
+for(cur_foc in focal_IDs) {
+  cur_intra <- intra_alphas %>%
+    filter(focal == cur_foc)
   
-plFecDiff <- ggplot(fec_draws, aes(y = treatmentsplit,
-                        fill = after_stat(y < 0))) +
-  stat_slab(aes(alpha = (after_stat(level))), .width = c(.95, 1), normalize = "panels") +
-  scale_alpha_manual(values = c(0.25, 1)) +
-  scale_fill_manual(values=c( "#E69F00", "#56B4E9")) +
-  geom_hline(yintercept = 0, alpha = 0.75, linetype = "dashed") +
-  theme_classic() +
-  theme(text = element_text(size=10),
-        axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        legend.position = "none",
-        legend.text=element_text(size = 15),
-        strip.background = element_blank(),
-        plot.title.position = "plot",
-        plot.caption.position =  "plot") +
-    facet_wrap(Focal~SpCombo, scales = "free", nrow = 3) +
-  labs(x = "",
-       y = "Estimated Change in Mean Number of Seeds from Clustered Competitors")
-plFecDiff
+  for(cur_res in res_IDs) {
+    if(cur_foc == cur_res) {
+      next
+    }
+    cur_inter <- alpha_draws %>%
+      filter(focal == cur_foc & resident == cur_res) %>%
+      mutate(InterIntra = (value - cur_intra$value))
+    
+    inter_vs_intra <- rbind(inter_vs_intra, cur_inter)
+    
+  }
+  
+}
 
-jpeg("./figs/SIFigFocalInd.jpeg",
-     width = 3100, height = 1600, res = 300)
-plFecDiff
+inter_vs_intra <- inter_vs_intra %>%
+  mutate(resident = paste("Resident:", resident)) %>%
+  mutate(focal = paste("Focal:", focal)) %>%
+  mutate(treatment = case_when(treatment == "Spl" ~ "Clustered",
+                               treatment == "Mix" ~ "Mixed"))
+
+# plotting posterior densities of the alphas
+plInterIntra <- ggplot(inter_vs_intra, aes(x = InterIntra, color = treatment)) +
+  geom_density(size = 1) + theme_classic() +
+  facet_wrap(focal ~ resident, scales = "free", nrow = 3) +
+  labs(x = "Difference of Interspecific and Intraspecific Competition Effect", y = "") +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  theme(text = element_text(size=15),
+        legend.title = element_blank(),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text=element_text(size = 15),
+        strip.background = element_blank()) +
+  scale_color_manual(values=c("#332288", "#117733"))
+plInterIntra
+
+jpeg("./figs/SIFigFocalCompEff.jpeg",
+     width = 3250, height = 1600, res = 300)
+plInterIntra
 dev.off()
-
-fec_draws %>%
-  group_by(Focal) %>%
-  summarise(positive = sum(treatmentsplit > 0) / n())
-
-slope1_draws <- fec_draws %>%
-  select(c(sp1_slope, Focal, sp1, SpCombo))
-colnames(slope1_draws) <- c("slope", "Focal", "sp", "SpCombo")
-
-slope2_draws <- fec_draws %>%
-  select(c(sp2_slope, Focal, sp2, SpCombo))
-colnames(slope2_draws) <- c("slope", "Focal", "sp", "SpCombo")
-
-slope_draws <- rbind(slope1_draws, slope2_draws) %>%
-  mutate(sp = paste("Competitor:", sp)) %>%
-  mutate(Focal = paste("Focal:", Focal))
-
-ggplot(slope_draws, aes(x = slope, y = SpCombo, color = rev(SpCombo))) +
-  stat_pointinterval(.width = c(0.89, 0.95)) +
-  facet_wrap(Focal~sp, scales = "free", nrow = 3) +
-  geom_hline(yintercept = 0, alpha = 0.75, linetype = "dashed") +
-  theme_classic() +
-  geom_vline(xintercept = 0) +
-  theme(text = element_text(size=10),
-        legend.position = "none",
-        axis.text.x = element_text(size = 10),
-        legend.text=element_text(size = 15),
-        strip.background = element_blank(),
-        plot.title.position = "plot",
-        plot.caption.position =  "plot") +
-  labs(y = "Species Combination", x = "Slope of Effect of Competitor Abundance")
-
