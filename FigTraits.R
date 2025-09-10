@@ -274,7 +274,6 @@ traits$otherspecies <- ifelse(traits$species == traits$sp1, traits$sp2, traits$s
 
 # traits$C_perc <- NC_data$C_perc[match(traits$plot, NC_data$plot)]
 # traits$N_perc <- NC_data$N_perc[match(traits$plot, NC_data$plot)]
-# traits$d13C <- NC_data$d13C[match(traits$plot, NC_data$plot)]
 # traits$d15N <- NC_data$d15N[match(traits$plot, NC_data$plot)]
 
 traits$CNratio <- NC_data$C.N[match(traits$plot, NC_data$plot)]
@@ -341,7 +340,7 @@ for (i in 1:length(plot_list)) {
 
 jpeg("SIFigPCA.jpeg",
      width = 2500, height = 2500, res = 300)
-PCA_all <- grid.arrange(grobs = c(plot_list, list(legend)), 
+PCA_all <- grid.arrange(grobs = c(plot_list, list(legend)),
                         ncol = 2)
 dev.off()
 
@@ -378,21 +377,23 @@ for(cur_combo in sp_combos) {
   
 }
 
-ggplot(trait_draws, aes(y = b_treatmentsplit, x = SpCombo, ,
-                      fill = after_stat(y < 0))) +
+PC1_fig <- ggplot(trait_draws, aes(y = b_treatmentsplit, x = SpCombo, ,
+                                   fill = after_stat(y < 0))) +
   stat_slab(aes(alpha = (after_stat(level))), .width = c(.95, 1)) +
   scale_fill_manual(values=c( "#E69F00", "#56B4E9")) +
   geom_hline(yintercept = 0, alpha = 0.75, linetype = "dashed") +
   theme_classic() +
-  theme(text = element_text(size=10),
+  theme(text = element_text(size=12),
         legend.position = "none",
-        axis.text.x = element_text(size = 10),
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
         legend.text=element_text(size = 15),
         strip.background = element_blank(),
         plot.title.position = "plot",
         plot.caption.position =  "plot") +
   labs(x = "Species Combination",
-       y = "Difference in Competitor Performance and Traits\n Clustered Relative to Mixed")
+       y = "Difference in PC1\n Clustered Relative to Mixed")
+PC1_fig
 
 
 summ_traits <- trait_draws %>% group_by(SpCombo) %>% point_interval(b_treatmentsplit, .width = 0.89) %>%
@@ -488,7 +489,7 @@ plTraitsFecCorr <- ggplot() +
         legend.key.spacing.y = unit(0.25, "cm"),
         plot.title.position = "plot",
         plot.caption.position =  "plot") +
-  labs(x = "Difference in Competitor Performance and Traits\n Clustered Relative to Mixed",
+  labs(x = "Difference in Competitor Size and Traits (PC1)\n Clustered Relative to Mixed",
        y = "Difference in Focal Fecundity\n in Clustered Relative to Mixed Competitors",
        color = "Species\nCombination")
 plot(plTraitsFecCorr)
@@ -522,7 +523,7 @@ vp <- viewport(width = 0.25, height = 0.25, x = 0.66, y = 0.3)
 print(plTraitsFecCorr)
 print(plSlopeHist, vp = vp)
 
-jpeg("FigTraits.jpeg",
+jpeg("../SplitMixed_Figures/FigTraits.jpeg",
      width = 2500, height = 1500, res = 300)
 print(plTraitsFecCorr)
 print(plSlopeHist, vp = vp)
@@ -648,5 +649,187 @@ jpeg("SIFigTraits_avg.jpeg",
 print(plTraitsFecCorr)
 print(plSlopeHist, vp = vp)
 dev.off()
+
+
+## Check using PC2 ##
+
+loo_data <- data.frame()
+trait_drawsPC2 <- data.frame()
+for(cur_combo in sp_combos) {
+  
+  cur_trait <- traits_pca %>%
+    filter(SpCombo == cur_combo) %>%
+    arrange(treatment)
+  
+  cur_fit <- brm(formula = PC2 ~ 1 + treatment, # this is the only difference
+                 data = cur_trait, backend = "cmdstanr")
+  
+  cur_draws <- cur_fit %>%
+    spread_draws(b_Intercept,
+                 b_treatmentsplit)
+  
+  cur_draws$SpCombo <- unique(cur_trait$SpCombo)
+  trait_drawsPC2 <- rbind(trait_drawsPC2, cur_draws)
+  
+}
+
+PC2_fig <- ggplot(trait_drawsPC2, aes(y = b_treatmentsplit, x = SpCombo, ,
+                        fill = after_stat(y < 0))) +
+  stat_slab(aes(alpha = (after_stat(level))), .width = c(.95, 1)) +
+  scale_fill_manual(values=c( "#E69F00", "#56B4E9")) +
+  geom_hline(yintercept = 0, alpha = 0.75, linetype = "dashed") +
+  theme_classic() +
+  theme(text = element_text(size=12),
+        legend.position = "none",
+        axis.text.x = element_text(size = 10),
+        legend.text=element_text(size = 15),
+        strip.background = element_blank(),
+        plot.title.position = "plot",
+        plot.caption.position =  "plot") +
+  labs(x = "Species Combination",
+       y = "Difference in PC2\n Clustered Relative to Mixed")
+PC2_fig
+
+jpeg("../SplitMixed_Figures/PC_fig.jpeg",
+     width = 3500, height = 2000, res = 300)
+grid.arrange(PC1_fig, PC2_fig, ncol = 1)
+dev.off()
+
+summ_traits <- trait_drawsPC2 %>% group_by(SpCombo) %>% point_interval(b_treatmentsplit, .width = 0.89) %>%
+  rename(b_treatmentsplit_PC2 = b_treatmentsplit,
+         lower_PC2 = .lower,
+         upper_PC2 = .upper,
+         width = .width,
+         point = .point,
+         interval = .interval)
+
+summ_stats2 <- cbind(summ_stats, summ_traits)
+summ_stats2$SpCombo2 <- paste(summ_stats2$sp1, summ_stats2$sp2)
+
+summ_stats2 <- summ_stats2[-c(10)]
+
+summ_stats2$abs_b_treatmentsplit_PC2 <- abs(summ_stats2$b_treatmentsplit_PC2)
+summ_stats2$abs_lower_PC2 <- summ_stats2$lower_PC2 + (summ_stats2$abs_b_treatmentsplit_PC2 - summ_stats2$b_treatmentsplit_PC2)
+summ_stats2$abs_upper_PC2 <- summ_stats2$upper_PC2 + (summ_stats2$abs_b_treatmentsplit_PC2 - summ_stats2$b_treatmentsplit_PC2)
+
+summ_stats_max <- summ_stats2 %>% group_by(SpCombo2) %>% slice_max(abs_b_treatmentsplit_PC2)
+
+
+max_combos <- unique(summ_stats_max$SpCombo)
+trait_draws2 <- trait_draws %>% filter(SpCombo %in% max_combos) %>% rename(traits_b_treatmentsplit = b_treatmentsplit)
+
+fec_draws$SpCombo2 <- paste(fec_draws$sp2, fec_draws$sp1)
+fec_draws$SpCombo <- ifelse(fec_draws$SpCombo %in% max_combos, fec_draws$SpCombo, fec_draws$SpCombo2)
+combined_draws <- merge(trait_draws2 %>% select(-c(b_Intercept)), fec_draws %>% select(c(b_treatmentsplit, SpCombo, .chain, .iteration, .draw)),
+                        by = c("SpCombo", ".chain", ".iteration", ".draw"))
+
+# summ_combined_draws <- combined_draws %>% group_by(.chain, .iteration, .draw) %>%
+#   summarize(slope = coef(summary(lm(b_treatmentsplit ~ abs(traits_b_treatmentsplit))))[2,1],
+#             intercept = coef(summary(lm(b_treatmentsplit ~ abs(traits_b_treatmentsplit))))[1,1],
+#             p = coef(summary(lm(b_treatmentsplit ~ abs(traits_b_treatmentsplit))))[2,4])
+
+
+
+summ_fec_vs_traits <- combined_draws %>%
+  group_by(SpCombo) %>%
+  dplyr::summarise(MeanTraits = abs(mean(traits_b_treatmentsplit)),
+                   SdTraits = abs(sd(traits_b_treatmentsplit)),
+                   SeTraits = SdTraits/(sqrt(15)),
+                   MeanFec = mean(b_treatmentsplit),
+                   SdFec = sd(b_treatmentsplit),
+                   SeFec = SdFec/(sqrt(15))
+  )
+
+meta_fit_traits <- brm(formula = MeanFec | se(SdFec) ~ me(MeanTraits, SdTraits),
+                       data = summ_fec_vs_traits, backend = "cmdstanr",
+                       family = gaussian, iter = 100000,
+                       control = list(adapt_delta = 0.99),
+                       prior = set_prior("normal(0,0.5)", class = "Intercept")
+)
+fix_ef_reg <- fixef(meta_fit_traits)
+
+summ_fec_vs_traits <- summ_fec_vs_traits %>% separate(SpCombo, c("sp1", "sp2")) %>%
+  mutate(sp1 = case_when(sp1 == "AC" ~ "A. wrangelianus",
+                         sp1 == "FE" ~ "F. microstachys",
+                         sp1 == "PL" ~ "P. erecta",
+                         sp1 == "SA" ~ "S. columbariae",
+                         sp1 == "UR" ~ "U. lindleyi")) %>%
+  mutate(sp2 = case_when(sp2 == "AC" ~ "A. wrangelianus",
+                         sp2 == "FE" ~ "F. microstachys",
+                         sp2 == "PL" ~ "P. erecta",
+                         sp2 == "SA" ~ "S. columbariae",
+                         sp2 == "UR" ~ "U. lindleyi")) %>%
+  mutate(SpCombo = ifelse(sp1 < sp2, paste0(sp1, "\n", sp2), paste0(sp2, "\n", sp1)))
+
+plTraitsFecCorr <- ggplot() +
+  # geom_abline(intercept = fix_ef_reg[1,1],
+  #             slope = fix_ef_reg[2,1],
+  #             size = 1) +
+  geom_point(data = summ_fec_vs_traits,
+             aes(x = MeanTraits, y = MeanFec, color = SpCombo),
+             size = 3) +
+  geom_errorbarh(data = summ_fec_vs_traits,
+                 height = 0.01,
+                 aes(y = MeanFec,
+                     xmin = MeanTraits - SdTraits,
+                     xmax = MeanTraits + SdTraits,
+                     color = SpCombo)) +
+  geom_errorbar(data = summ_fec_vs_traits,
+                aes(x = MeanTraits,
+                    y = MeanFec,
+                    ymin = MeanFec - SdFec,
+                    ymax = MeanFec + SdFec,
+                    color = SpCombo)) +
+  theme_classic() +
+  theme(text = element_text(size=15),
+        axis.text.x = element_text(size = 15),
+        legend.text=element_text(size = 10, face = "italic"),
+        strip.background = element_blank(),
+        legend.key.spacing.y = unit(0.25, "cm"),
+        plot.title.position = "plot",
+        plot.caption.position =  "plot") +
+  labs(x = "Difference in PC2\n Clustered Relative to Mixed",
+       y = "Difference in Focal Fecundity\n in Clustered Relative to Mixed Competitors",
+       color = "Species\nCombination")
+plot(plTraitsFecCorr)
+
+slope_data <- meta_fit_traits %>%
+  spread_draws(b_Intercept, bsp_meMeanTraitsSdTraits)
+
+plSlopeHist <- ggplot(slope_data, aes(x = bsp_meMeanTraitsSdTraits,
+                                      fill = after_stat(x < 0))) +
+  stat_slab(aes(alpha = (after_stat(level))), .width = c(.95, 1)) +
+  scale_fill_manual(values=c( "#E69F00", "#56B4E9")) +
+  scale_alpha_manual(values = c(0.25, 1)) +
+  geom_vline(xintercept = 0, alpha = 0.75, linetype = "dashed") +
+  theme_classic() +
+  theme(text = element_text(size=10),
+        legend.position = "none",
+        axis.text.x = element_text(size = 10),
+        legend.text=element_text(size = 10),
+        strip.background = element_blank(),
+        plot.title.position = "plot",
+        plot.caption.position =  "plot",
+        plot.background = element_rect(colour = "black", fill=NA, linewidth=1)) +
+  xlim(-2.5, 4) +
+  labs(x = "Slope",
+       y = "")
+plSlopeHist
+
+
+vp <- viewport(width = 0.25, height = 0.25, x = 0.66, y = 0.3)
+
+print(plTraitsFecCorr)
+print(plSlopeHist, vp = vp)
+
+jpeg("../SplitMixed_Figures/FigTraits_PC2.jpeg",
+     width = 2500, height = 1500, res = 300)
+print(plTraitsFecCorr)
+print(plSlopeHist, vp = vp)
+dev.off()
+
+summ_slopes <- sum(slope_data$bsp_meMeanTraitsSdTraits > 0) / nrow(slope_data)
+summ_slopes
+
 
 

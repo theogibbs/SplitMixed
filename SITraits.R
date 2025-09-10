@@ -181,18 +181,24 @@ ggplot() +
 # ggsave("Figures/Supplementary/SuppTraits_splitmixed_rawdata.jpeg", width = 15, height = 10, units = "in")
 
 ggplot() +  
-  geom_point(data = trait_draws_summ, aes(y = value, x = treatment, color = treatment)) +
-  geom_errorbar(data = trait_draws_summ, aes(ymin = lower, ymax = upper, x = treatment, color = treatment), width = 0.2) +
+  geom_point(data = trait_draws_summ %>% filter(trait != "canopy"), aes(y = value, x = treatment, color = treatment)) +
+  geom_errorbar(data = trait_draws_summ %>% filter(trait != "canopy"), aes(ymin = lower, ymax = upper, x = treatment, color = treatment), width = 0.2) +
   theme_classic() +
-  ggh4x::facet_grid2(trait ~ species, scales = "free", independent = "y", labeller = labeller(trait = y_labels, species = sp_labels),) +
+  ggh4x::facet_grid2(trait ~ species, scales = "free", independent = "y",
+                     labeller = labeller(trait = y_labels, species = sp_labels), 
+                     # switch = "y", axes = "x"
+                     ) +
   theme(legend.position = "none",
+        # strip.placement = "outside",
         strip.background = element_blank(),
         strip.text = ggtext::element_markdown(size = 15, face = "bold"),
         axis.title.y = element_blank(),
-        axis.title.x = element_blank()) +
+        axis.title.x = element_blank()
+        ) +
   scale_color_manual(values=c("#332288", "#117733"))
 
 # ggsave("Figures/Supplementary/SuppTraits_splitmixed.jpeg", width = 15, height = 10, units = "in")
+
 
 
 
