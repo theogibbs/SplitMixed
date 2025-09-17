@@ -281,6 +281,30 @@ traits$d13C <- NC_data$d13C[match(traits$plot, NC_data$plot)]
 
 traits2 <- traits %>% mutate(canopy = ((axis1 + axis2)/2)/(height))
 
+full_pca <- prcomp(traits2[c(3,9, 10,12)] %>% na.omit(), scale = T)
+
+full_pca_plot <- autoplot(full_pca, traits2[c(1,3,9, 10,12, 14)] %>% na.omit() %>% 
+                            mutate(species = case_when(species == "AC" ~ "A. wrangelianus",
+                                                       species == "FE" ~ "F. microstachys",
+                                                       species == "PL" ~ "P. erecta",
+                                                       species == "SA" ~ "S. columbariae",
+                                                       species == "URLI" ~ "U. lindleyi")) %>% 
+                            mutate(treatment = case_when(treatment == "mix" ~ "mixed",
+                                                       treatment == "split" ~ "clustered")), 
+                          scale = T,
+                          colour = 'species', shape = "treatment", alpha = 0.7,
+                          frame = T, frame.type = 'norm',
+                          loadings = TRUE, loadings.color = "black", 
+                          loadings.label = TRUE, loadings.label.color = "black", loadings.label.vjust = -.25, loadings.label.hjust = -.25) + 
+  theme_classic()
+
+full_pca_plot
+
+jpeg("../SplitMixed_Figures/SIFigfullPCA.jpeg",
+     width = 2000, height = 1500, res = 300)
+print(full_pca_plot)
+dev.off()
+
 
 traits_pca <- data.frame()
 plot_list <- list()
