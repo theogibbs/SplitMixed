@@ -202,6 +202,8 @@ rem_bare_na_fec_data$treatment <- fct_rev(rem_bare_na_fec_data$treatment)
 cur_fit <- brm(formula = Seeds ~ 1 + treatment + focal + combo,
                data = rem_bare_na_fec_data, backend = "cmdstanr", family = lognormal)
 
+rsq_fit <- bayes_R2(cur_fit)
+print(rsq_fit)
 loo_data <- loo(cur_fit)$estimates[3, 1:2]
 loo_data <- as.data.frame(t(loo_data))
 

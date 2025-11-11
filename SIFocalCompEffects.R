@@ -242,6 +242,7 @@ ggplot(plot_data, aes(x = SumDens, y = Seeds)) +
   facet_wrap(~focal, scales = "free") + theme_classic()
 
 mod_draws <- data.frame()
+focal_IDs <- unique(dens_data$focal)
 for(cur_foc in focal_IDs) {
   cur_data <- dens_data %>%
     filter(focal == cur_foc)
@@ -334,7 +335,7 @@ inter_vs_intra <- inter_vs_intra %>%
 plInterIntra <- ggplot(inter_vs_intra, aes(x = InterIntra, color = treatment)) +
   geom_density(size = 1) + theme_classic() +
   facet_wrap(focal ~ resident, scales = "free", nrow = 3) +
-  labs(x = "Difference of Interspecific and Intraspecific Competition Effect", y = "") +
+  labs(x = "Difference of Interspecific and Intraspecific Competition Effect", y = "Posterior Density") +
   geom_vline(xintercept = 0, linetype = "dashed") +
   theme(text = element_text(size=15),
         legend.title = element_blank(),

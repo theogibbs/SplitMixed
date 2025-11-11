@@ -584,7 +584,7 @@ plCompFecCorr <- ggplot() +
         plot.title.position = "plot",
         plot.caption.position =  "plot") +
   labs(x = "Absolute Value of Difference in Competitive Effect",
-       y = "Difference in Focal Fecundity\n in Clustered Relative to Mixed Competitors",
+       y = "Difference in Focal Seed Production\n in Clustered Relative to Mixed Competitors",
        color = "Species\nCombination")
 plCompFecCorr
 

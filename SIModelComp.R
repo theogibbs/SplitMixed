@@ -26,7 +26,8 @@ plModelComp <- ggplot(loo_comp, aes(x=Model, y=Estimate)) +
         strip.text.y = element_text(size = 15),
         axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
         legend.text=element_text(size = 15),
-        strip.background = element_blank())
+        strip.background = element_blank()) +
+  labs(y = "Leave-one-out\nInformation Criterion")
 plModelComp
 
 jpeg("./figs/SIFigModelComp.jpeg",

@@ -425,7 +425,7 @@ diff_alpha_draws$LogRatio <- log(diff_alpha_draws$value.x / diff_alpha_draws$val
 plDiffs <- ggplot(diff_alpha_draws, aes(x = LogRatio)) +
   geom_density(size = 1) + theme_classic() +
   facet_wrap(Focal ~ Resident, scales = "free", nrow = 3) +
-  labs(x = "Log Ratio of Mixed to Clustered Competition Coefficient", y = "") +
+  labs(x = expression("Log Ratio of Mixed to Clustered Competition Coefficient:" ~ log(frac(alpha[ij]^mixed, alpha[ij]^clustered))), y = "Posterior Density") +
   geom_vline(xintercept = 0, linetype = "dashed") +
   theme(text = element_text(size=15),
         strip.text.x = element_text(size = 15),
@@ -446,7 +446,8 @@ agg_diff_draws <- diff_alpha_draws %>%
 plAggDiffs <- ggplot(agg_diff_draws, aes(x = CumLogRatio)) +
   geom_density(size = 1) + theme_classic() +
   facet_wrap(~ Focal, scales = "free", nrow = 1) +
-  labs(x = "Cumulative Log Ratio of Mixed to Clustered Competition Coefficient", y = "") +
+  labs(x = expression("Cumulative Log Ratio of Mixed to\nClustered Competition Coefficient:" ~ Sigma[j] ~ log(frac(alpha[ij]^mixed, alpha[ij]^clustered))),
+       y = "Posterior Density") +
   geom_vline(xintercept = 0, linetype = "dashed") +
   theme(text = element_text(size=15),
         strip.text.x = element_text(size = 15),

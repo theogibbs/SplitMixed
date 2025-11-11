@@ -6,6 +6,7 @@ library(cmdstanr)
 library(tidybayes)
 library(reshape2)
 library(ggpubr)
+library(ggdist)
 
 # reading in seed calibration data
 seed_head_cal <- read.csv("seed_head_calibration.csv")
@@ -314,7 +315,7 @@ plFecDiff <- ggplot(fec_draws, aes(y = b_treatmentsplit, x = SpCombo, ,
         plot.title.position = "plot",
         plot.caption.position =  "plot") +
   labs(x = "Species Combination",
-       y = "Difference in Focal Fecundity\n in Clustered Relative to Mixed Competitors")
+       y = "Difference in Focal Seed Production\n in Clustered Relative to Mixed Competitors")
 plFecDiff
 
 jpeg("./figs/FigFecDiff.jpeg",
@@ -329,13 +330,13 @@ AC_draws <- fec_draws %>%
 print(AC_draws$Positive)
 
 SAUR_draws <- fec_draws %>%
-  filter(SpCombo == "SA UR") %>%
+  filter(SpCombo == "S. columbariae\nU. lindleyi") %>%
   mutate(Positive = b_treatmentsplit > 0) %>%
   summarise(Positive = sum(Positive) / n())
 print(SAUR_draws$Positive)
 
 FEPL_draws <- fec_draws %>%
-  filter(SpCombo == "FE PL") %>%
+  filter(SpCombo == "F. microstachys\nP. erecta") %>%
   mutate(Positive = b_treatmentsplit > 0) %>%
   summarise(Positive = sum(Positive) / n())
 print(FEPL_draws$Positive)
