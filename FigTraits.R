@@ -514,7 +514,7 @@ plTraitsFecCorr <- ggplot() +
         plot.title.position = "plot",
         plot.caption.position =  "plot") +
   labs(x = "Difference in Competitor Size and Traits (PC1)\n Clustered Relative to Mixed",
-       y = "Difference in Focal Fecundity\n in Clustered Relative to Mixed Competitors",
+       y = "Difference in Focal Seed Production\n in Clustered Relative to Mixed Competitors",
        color = "Species\nCombination")
 plot(plTraitsFecCorr)
 
